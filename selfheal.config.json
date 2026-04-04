@@ -1,0 +1,9 @@
+{
+  "mode": "standalone",
+  "maxRetries": 3,
+  "baseDelayMs": 1000,
+  "maxDelayMs": 30000,
+  "circuitThreshold": 5,
+  "circuitCooldownMs": 120000,
+  "targets": []
+}

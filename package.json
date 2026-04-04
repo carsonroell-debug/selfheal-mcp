@@ -1,0 +1,37 @@
+{
+  "name": "selfheal-mcp",
+  "version": "0.1.0",
+  "description": "Self-healing proxy for MCP servers — retry, circuit breaker, fallback chains, and observability",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "selfheal-mcp": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx src/index.ts",
+    "start": "node dist/index.js",
+    "lint": "tsc --noEmit"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "self-healing",
+    "circuit-breaker",
+    "retry",
+    "proxy",
+    "ai-agents",
+    "observability"
+  ],
+  "author": "Freedom Engineers <hello@freedomengineers.tech>",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^3.25.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.7.0"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "mode": "proxy",
+  "maxRetries": 3,
+  "baseDelayMs": 1000,
+  "maxDelayMs": 30000,
+  "circuitThreshold": 5,
+  "circuitCooldownMs": 120000,
+  "targets": [
+    {
+      "name": "my-api-server",
+      "transport": "streamable-http",
+      "url": "https://my-mcp-server.example.com/mcp"
+    },
+    {
+      "name": "local-db-server",
+      "transport": "stdio",
+      "command": "npx",
+      "args": ["-y", "my-db-mcp-server"],
+      "env": {
+        "DATABASE_URL": "postgresql://localhost/mydb"
+      }
+    }
+  ]
+}
