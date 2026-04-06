@@ -1,8 +1,14 @@
 # SelfHeal MCP
 
+[![npm](https://img.shields.io/npm/v/selfheal-mcp)](https://www.npmjs.com/package/selfheal-mcp)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![MCPize](https://img.shields.io/badge/MCPize-Install-0ea5e9)](https://mcpize.com/mcp/selfheal-mcp)
+
 Self-healing proxy for MCP servers. Wraps any MCP tool call with automatic retry, circuit breaker protection, and call observability.
 
 **Your AI agents stop breaking on flaky APIs.**
+
+> **One-click install:** [Install on MCPize](https://mcpize.com/mcp/selfheal-mcp) | `npx selfheal-mcp`
 
 ## Features
 
@@ -113,6 +119,27 @@ Agent → SelfHeal MCP → [Retry + Circuit Breaker] → Target API/MCP Server
 4. **Record metrics** — Log success/failure, duration, attempts
 5. **Update circuit** — Track consecutive failures per target
 
+## Install
+
+### MCPize (Recommended)
+
+One-click install with managed hosting: **[Install on MCPize](https://mcpize.com/mcp/selfheal-mcp)**
+
+### npm
+
+```bash
+npx selfheal-mcp
+```
+
+### PyPI
+
+Not applicable — this is a TypeScript server. For Python alternatives, see [LeadEnrich MCP](https://mcpize.com/mcp/leadenrich-mcp).
+
 ## License
 
 MIT — Built by [Freedom Engineers](https://freedomengineers.tech)
+
+## Related
+
+- [SiteHealth MCP](https://mcpize.com/mcp/sitehealth-mcp) — Full website health audit
+- [LeadEnrich MCP](https://mcpize.com/mcp/leadenrich-mcp) — Waterfall lead enrichment
