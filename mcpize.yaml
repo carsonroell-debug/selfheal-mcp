@@ -1,0 +1,10 @@
+name: selfheal-mcp
+description: Self-healing proxy for MCP servers — retry with exponential backoff, circuit breaker, fallback chains, and call observability
+runtime: typescript
+entry: dist/index.js
+build:
+  install: npm ci
+  command: npm run build
+transport: stdio
+bridge:
+  mode: stdio
