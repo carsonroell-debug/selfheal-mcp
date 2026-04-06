@@ -2,11 +2,12 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.carsonroell-debug/selfheal-mcp",
   "title": "SelfHeal MCP",
-  "description": "Self-healing proxy for MCP servers — retry with backoff, circuit breaker, fallback chains, and call observability",
+  "description": "Self-healing proxy for MCP servers with retry, circuit breaker, and observability",
   "version": "0.1.0",
   "websiteUrl": "https://freedomengineers.tech",
   "repository": {
-    "url": "https://github.com/carsonroell-debug/selfheal-mcp"
+    "url": "https://github.com/carsonroell-debug/selfheal-mcp",
+    "source": "github"
   },
   "packages": [
     {

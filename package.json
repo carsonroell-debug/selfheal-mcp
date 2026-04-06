@@ -1,6 +1,7 @@
 {
   "name": "selfheal-mcp",
-  "version": "0.1.0",
+  "mcpName": "io.github.carsonroell-debug/selfheal-mcp",
+  "version": "0.1.1",
   "description": "Self-healing proxy for MCP servers — retry, circuit breaker, fallback chains, and observability",
   "type": "module",
   "main": "dist/index.js",
@@ -25,6 +26,17 @@
   ],
   "author": "Freedom Engineers <hello@freedomengineers.tech>",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/carsonroell-debug/selfheal-mcp.git"
+  },
+  "homepage": "https://github.com/carsonroell-debug/selfheal-mcp#readme",
+  "files": [
+    "dist",
+    "README.md",
+    "selfheal.config.json",
+    "selfheal.config.proxy-example.json"
+  ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
     "zod": "^3.25.0"
