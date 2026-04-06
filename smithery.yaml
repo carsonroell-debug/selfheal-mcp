@@ -1,0 +1,31 @@
+# Smithery configuration for SelfHeal MCP Server
+# https://smithery.ai/docs/config
+
+startCommand:
+  type: stdio
+  configSchema:
+    type: object
+    properties:
+      SELFHEAL_MAX_RETRIES:
+        type: string
+        description: "Maximum retry attempts (default: 3)"
+        default: "3"
+      SELFHEAL_CIRCUIT_THRESHOLD:
+        type: string
+        description: "Failures before circuit opens (default: 5)"
+        default: "5"
+      SELFHEAL_CIRCUIT_RESET_MS:
+        type: string
+        description: "Milliseconds before half-open retry (default: 30000)"
+        default: "30000"
+    required: []
+  commandFunction: |
+    (config) => ({
+      command: "npx",
+      args: ["-y", "selfheal-mcp"],
+      env: {
+        SELFHEAL_MAX_RETRIES: config.SELFHEAL_MAX_RETRIES || "3",
+        SELFHEAL_CIRCUIT_THRESHOLD: config.SELFHEAL_CIRCUIT_THRESHOLD || "5",
+        SELFHEAL_CIRCUIT_RESET_MS: config.SELFHEAL_CIRCUIT_RESET_MS || "30000"
+      }
+    })
