@@ -1,19 +1,23 @@
 #!/usr/bin/env node
 
 /**
- * SelfHeal MCP Server
+ * SelfHeal MCP Server — Agent-Native with x402 Outcome-Based Pricing
  *
- * A self-healing proxy for MCP servers. Wraps any MCP tool call with:
+ * A self-healing proxy for MCP servers AND HTTP APIs. Wraps any call with:
  * - Retry with exponential backoff + jitter
  * - Per-target circuit breaker
  * - Call metrics and observability
  * - Fallback chains (call target B if target A fails)
  *
+ * x402 Payment Model:
+ * - Success path: 100% free pass-through
+ * - Failure path: Pay-per-heal via x402 micropayments (USDC)
+ * - Only charged on SUCCESSFUL heal — failed analyses are never billed
+ *
  * Modes:
  *   1. Standalone — exposes its own tools (wrap_call, metrics, circuit status)
  *   2. Proxy — connects to downstream MCP servers, re-exposes their tools with healing
- *
- * Config via env vars or selfheal.config.json in cwd.
+ *   3. HTTP API — x402-protected proxy at /api/proxy with LLM-powered error analysis
  */
 
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -27,6 +31,11 @@ import { MetricsCollector } from "./metrics.js";
 import { SelfHealProxy, type TargetServer } from "./proxy.js";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { loadX402Config } from "./x402.js";
+import { HealEngine, loadHealConfig } from "./heal.js";
+import { HttpApiHandler } from "./http-api.js";
+import { ResponseCache } from "./cache.js";
+import { MonitoringRegistry } from "./monitoring.js";
 
 // --- Config ---
 interface Config {
@@ -67,11 +76,20 @@ async function main() {
   const breaker = new CircuitBreaker(config.circuitThreshold, config.circuitCooldownMs);
   const metrics = new MetricsCollector();
 
+  // x402 + Monitoring setup
+  const x402Config = loadX402Config();
+  const healConfig = loadHealConfig();
+  const monitor = new MonitoringRegistry();
+  const healEngine = new HealEngine(healConfig);
+  const cache = new ResponseCache(1000, 30_000);
+  const httpApi = new HttpApiHandler(x402Config, monitor, healEngine, cache);
+
   const server = new McpServer(
-    { name: "selfheal-mcp", version: "0.1.0" },
+    { name: "selfheal-mcp", version: "0.2.0" },
     {
       instructions: [
         "SelfHeal wraps MCP tool calls with automatic retry, circuit breaker, and observability.",
+        "Now with x402 outcome-based pricing: agents only pay when errors are healed.",
         "",
         "STANDALONE MODE: Use `wrap_call` to execute any function with self-healing.",
         "Use `circuit_status` to check health of targets.",
@@ -79,6 +97,9 @@ async function main() {
         "",
         "PROXY MODE: All downstream tools are re-exposed with self-healing built in.",
         "Use `selfheal_metrics` and `selfheal_circuits` for observability.",
+        "",
+        "HTTP API MODE: POST to /api/proxy with x402 payment for LLM-powered error analysis.",
+        "Success responses pass through free. Only failures trigger x402 payment.",
       ].join("\n"),
       capabilities: { logging: {} },
     },
@@ -397,40 +418,98 @@ async function main() {
     },
   );
 
+  // --- x402 observability tool (available in all modes) ---
+  server.registerTool(
+    "x402_status",
+    {
+      title: "x402 Payment Status",
+      description:
+        "Get x402 payment and heal statistics — payments received, revenue, heal success rate, LLM cost.",
+      annotations: { readOnlyHint: true },
+    },
+    async () => {
+      const usage = monitor.getUsageSummary();
+      return {
+        content: [
+          {
+            type: "text" as const,
+            text: JSON.stringify(
+              {
+                x402Enabled: !!x402Config.receivingWallet,
+                healConfigured: healEngine.isConfigured,
+                ...usage,
+              },
+              null,
+              2,
+            ),
+          },
+        ],
+      };
+    },
+  );
+
   // --- Start server ---
   const port = process.env.PORT ? parseInt(process.env.PORT) : undefined;
   if (port) {
-    // SSE mode for cloud deployments (MCPize, etc.)
+    // HTTP mode — serves both MCP (SSE) and HTTP API (x402 proxy)
     const transports: Record<string, SSEServerTransport> = {};
+
     const httpServer = createServer(async (req, res) => {
       const url = new URL(req.url ?? "/", `http://localhost:${port}`);
+
+      // MCP SSE transport endpoints
       if (url.pathname === "/sse" && req.method === "GET") {
         const transport = new SSEServerTransport("/messages", res);
         transports[transport.sessionId] = transport;
         transport.onclose = () => { delete transports[transport.sessionId]; };
         await server.connect(transport);
         await transport.start();
-      } else if (url.pathname === "/messages" && req.method === "POST") {
+        return;
+      }
+
+      if (url.pathname === "/messages" && req.method === "POST") {
         const sessionId = url.searchParams.get("sessionId") ?? "";
         const transport = transports[sessionId];
         if (!transport) { res.writeHead(404).end("Session not found"); return; }
         let body = "";
         req.on("data", (c: Buffer) => { body += c.toString(); });
         req.on("end", () => { transport.handlePostMessage(req, res, JSON.parse(body)); });
-      } else if (url.pathname === "/" || url.pathname === "/health") {
-        res.writeHead(200, { "Content-Type": "application/json" }).end(JSON.stringify({ status: "ok" }));
-      } else {
-        res.writeHead(404).end("Not found");
+        return;
       }
+
+      // HTTP API endpoints (x402 proxy, heal, usage, metrics, health)
+      await httpApi.handleRequest(req, res);
     });
+
+    // Start monitoring alerts
+    monitor.startAlertLoop();
+
     httpServer.listen(port, () => {
-      console.error(`SelfHeal MCP server listening on port ${port} (SSE mode, ${config.mode})`);
+      console.error(`SelfHeal MCP server listening on port ${port}`);
+      console.error(`  MCP (SSE): /sse`);
+      console.error(`  HTTP API:  /api/proxy (x402), /api/heal, /api/usage, /api/pricing`);
+      console.error(`  Metrics:   /metrics (Prometheus)`);
+      console.error(`  x402:      ${x402Config.receivingWallet ? "ENABLED" : "DISABLED (set X402_RECEIVING_WALLET)"}`);
+      console.error(`  Heal LLM:  ${healEngine.isConfigured ? "CONFIGURED" : "DISABLED (set HEAL_LLM_API_KEY)"}`);
+      console.error(`  Mode:      ${config.mode}`);
     });
+
+    // Graceful shutdown
+    const shutdown = () => {
+      console.error("Shutting down...");
+      monitor.stopAlertLoop();
+      httpApi.shutdown();
+      httpServer.close();
+      process.exit(0);
+    };
+    process.on("SIGTERM", shutdown);
+    process.on("SIGINT", shutdown);
   } else {
-    // Stdio mode for local usage
+    // Stdio mode for local usage (MCP only, no HTTP API)
     const transport = new StdioServerTransport();
     await server.connect(transport);
-    console.error("SelfHeal MCP server started (mode: " + config.mode + ")");
+    console.error(`SelfHeal MCP server started (mode: ${config.mode})`);
+    console.error("  x402 HTTP API requires PORT env var to be set.");
   }
 }
 
