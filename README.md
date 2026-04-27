@@ -198,6 +198,7 @@ Supported networks: **Base** (mainnet + Sepolia testnet), **Solana**
 | `X402_FACILITATOR_URL` | `https://x402.org/facilitator` | x402 facilitator URL |
 | `X402_NETWORKS` | `base,base-sepolia` | Supported networks |
 | `X402_TESTNET` | `true` | Use testnet (`false` for mainnet) |
+| `SELFHEAL_DEMO_MODE` | `false` | Bypass x402, run heal for free (first-run trial — no wallet needed) |
 | **LLM** | | |
 | `HEAL_LLM_API_KEY` | _(required)_ | LLM API key |
 | `HEAL_LLM_BASE_URL` | `https://api.openai.com/v1` | LLM API base URL |

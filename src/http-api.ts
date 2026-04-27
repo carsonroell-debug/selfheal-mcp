@@ -333,6 +333,17 @@ export class HttpApiHandler {
       const paymentProof = extractPaymentProof(req);
 
       if (!paymentProof) {
+        // Demo mode — run heal analysis for free, no x402 required
+        if (this.x402Config.demoMode) {
+          await this.handleDemoHeal(
+            res,
+            proxyReq,
+            targetResponse.status,
+            errorBody,
+            errorHeaders,
+          );
+          return;
+        }
         // No payment — return 402 with pricing
         const paymentRequired = build402Response(
           this.x402Config,
@@ -358,6 +369,84 @@ export class HttpApiHandler {
     } finally {
       this.monitor.activeRequests.dec();
     }
+  }
+
+  /**
+   * Handle demo heal flow: skip payment, run analysis, return result with demoMode flag.
+   * Used when SELFHEAL_DEMO_MODE=true so first-time users can try the heal flow
+   * without provisioning a USDC wallet.
+   */
+  private async handleDemoHeal(
+    res: ServerResponse,
+    proxyReq: ProxyRequestBody,
+    statusCode: number,
+    errorBody: string,
+    errorHeaders: Record<string, string>,
+  ): Promise<void> {
+    if (!this.healEngine.isConfigured) {
+      res.writeHead(503, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          error: "Heal engine not configured",
+          hint: "Server LLM API key not set. Demo mode requires the same heal engine as paid mode.",
+        }),
+      );
+      return;
+    }
+
+    this.monitor.healRequests.inc({ status: String(statusCode) });
+    const healStart = Date.now();
+
+    const healReq: HealRequest = {
+      url: proxyReq.url,
+      method: proxyReq.method ?? "GET",
+      headers: proxyReq.headers ?? {},
+      body: proxyReq.body,
+      statusCode,
+      errorBody,
+      errorHeaders,
+    };
+
+    let healResult: HealResult;
+    try {
+      healResult = await this.healEngine.analyze(healReq);
+    } catch (err) {
+      this.monitor.healFailures.inc();
+      res.writeHead(502, { "Content-Type": "application/json" });
+      res.end(
+        JSON.stringify({
+          error: "Heal analysis failed",
+          reason: err instanceof Error ? err.message : String(err),
+          demoMode: true,
+        }),
+      );
+      return;
+    }
+
+    const healLatency = Date.now() - healStart;
+    this.monitor.healLatency.observe(healLatency);
+    this.monitor.recordLlmCost(healResult.tokenUsage.total);
+
+    if (healResult.success) {
+      this.monitor.healSuccesses.inc();
+    } else {
+      this.monitor.healFailures.inc();
+    }
+
+    res.writeHead(200, {
+      "Content-Type": "application/json",
+      "X-SelfHeal-Status": "demo-healed",
+      "X-SelfHeal-Cost": "$0 (demo mode)",
+      "X-SelfHeal-Latency": String(healLatency),
+    });
+    res.end(
+      JSON.stringify({
+        healed: healResult.success,
+        demoMode: true,
+        result: healResult,
+        hint: "You're using SelfHeal demo mode. Paid heals (via x402 USDC or Reliability Plan) include unlimited usage and production guarantees.",
+      }),
+    );
   }
 
   /** Handle paid heal flow: verify → analyze → settle on success */
@@ -504,7 +593,7 @@ export class HttpApiHandler {
       return;
     }
 
-    // This endpoint always requires payment
+    // This endpoint requires payment unless demo mode is enabled
     const paymentProof = extractPaymentProof(req);
     if (!paymentProof) {
       const body = await readBody(req);
@@ -516,6 +605,26 @@ export class HttpApiHandler {
         statusCode = parsed.statusCode ?? 500;
       } catch {
         // Use defaults
+      }
+
+      // Demo mode — run heal analysis for free, no x402 required
+      if (this.x402Config.demoMode) {
+        let healReq: HealRequest;
+        try {
+          healReq = JSON.parse(body) as HealRequest;
+        } catch {
+          res.writeHead(400, { "Content-Type": "application/json" });
+          res.end(JSON.stringify({ error: "Invalid JSON body" }));
+          return;
+        }
+        await this.handleDemoHeal(
+          res,
+          { url: healReq.url, method: healReq.method, headers: healReq.headers, body: healReq.body },
+          healReq.statusCode,
+          healReq.errorBody,
+          healReq.errorHeaders,
+        );
+        return;
       }
 
       const paymentRequired = build402Response(
@@ -676,6 +785,7 @@ export class HttpApiHandler {
         service: "selfheal-mcp",
         x402Enabled: !!this.x402Config.receivingWallet,
         healConfigured: this.healEngine.isConfigured,
+        demoMode: this.x402Config.demoMode,
         timestamp: new Date().toISOString(),
       }),
     );

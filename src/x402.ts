@@ -146,6 +146,12 @@ export interface X402Config {
   testnet: boolean;
   /** Payment deadline in seconds */
   deadlineSeconds: number;
+  /**
+   * Demo mode — bypass x402 payment entirely and run heal analysis for free.
+   * Used so first-time users can try the heal flow without provisioning a USDC wallet.
+   * Server-only setting; never enable in production with a real wallet attached.
+   */
+  demoMode: boolean;
 }
 
 export function loadX402Config(): X402Config {
@@ -169,6 +175,7 @@ export function loadX402Config(): X402Config {
     pricingTiers: customPricing,
     testnet: process.env.X402_TESTNET === "true",
     deadlineSeconds: parseInt(process.env.X402_DEADLINE_SECONDS ?? "300"),
+    demoMode: process.env.SELFHEAL_DEMO_MODE === "true",
   };
 }
 
