@@ -5,5 +5,8 @@
   "maxDelayMs": 30000,
   "circuitThreshold": 5,
   "circuitCooldownMs": 120000,
-  "targets": []
+  "targets": [],
+
+  "_x402_notes": "x402 is configured via environment variables. See .env.example for details.",
+  "_pricing_notes": "Outcome-based: agents only pay when errors are successfully healed. Successes are free."
 }

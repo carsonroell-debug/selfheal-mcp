@@ -1,12 +1,18 @@
 {
   "name": "selfheal-mcp",
   "mcpName": "io.github.carsonroell-debug/selfheal-mcp",
-  "version": "0.1.1",
-  "description": "Self-healing proxy for MCP servers — retry, circuit breaker, fallback chains, and observability",
+  "version": "0.2.0",
+  "description": "Self-healing proxy for MCP servers and HTTP APIs — x402 outcome-based pricing, LLM error analysis, retry, circuit breaker, and observability",
   "type": "module",
   "main": "dist/index.js",
   "bin": {
     "selfheal-mcp": "dist/index.js"
+  },
+  "exports": {
+    ".": "./dist/index.js",
+    "./sdk": "./dist/sdk.js",
+    "./x402": "./dist/x402.js",
+    "./heal": "./dist/heal.js"
   },
   "scripts": {
     "build": "tsc",
@@ -22,7 +28,12 @@
     "retry",
     "proxy",
     "ai-agents",
-    "observability"
+    "observability",
+    "x402",
+    "micropayments",
+    "usdc",
+    "outcome-based-pricing",
+    "agent-native"
   ],
   "author": "Freedom Engineers <hello@freedomengineers.tech>",
   "license": "MIT",
@@ -30,7 +41,7 @@
     "type": "git",
     "url": "https://github.com/carsonroell-debug/selfheal-mcp.git"
   },
-  "homepage": "https://github.com/carsonroell-debug/selfheal-mcp#readme",
+  "homepage": "https://selfheal.dev",
   "files": [
     "dist",
     "README.md",

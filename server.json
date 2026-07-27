@@ -2,9 +2,9 @@
   "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
   "name": "io.github.carsonroell-debug/selfheal-mcp",
   "title": "SelfHeal MCP",
-  "description": "Self-healing proxy for MCP servers with retry, circuit breaker, and observability",
-  "version": "0.1.0",
-  "websiteUrl": "https://freedomengineers.tech",
+  "description": "Self-healing proxy for MCP servers — retry, circuit breaker, fallback chains, observability. Patches timeout cascades and tool call failures at runtime. Pairs with selfheal.dev x402 for outcome-based pricing.",
+  "version": "0.2.0",
+  "websiteUrl": "https://selfheal.dev",
   "repository": {
     "url": "https://github.com/carsonroell-debug/selfheal-mcp",
     "source": "github"
@@ -13,7 +13,7 @@
     {
       "registryType": "npm",
       "identifier": "selfheal-mcp",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "transport": {
         "type": "stdio"
       },
